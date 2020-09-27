@@ -95,7 +95,7 @@ def ner_id_label_encoding(ner_df):
     #label_encoding
     lb_make_ner = LabelEncoder()
     ner_df['ner_id'] = lb_make_ner.fit_transform(ner_df['ner_id'])
-    lb_make_name_mapping = dict(zip(lb_make_ner.classes_, lb_make_ner.transform(lb_make_ner.classes_)))
+    lb_make_name_mapping_ner = dict(zip(lb_make_ner.classes_, lb_make_ner.transform(lb_make_ner.classes_)))
     # print(ner_df)
     return ner_df, lb_make_name_mapping_ner
 
