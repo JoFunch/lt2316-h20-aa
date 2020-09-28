@@ -12,113 +12,6 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-iddict = dict()
-
-def get_tree_from_file(data_dir):
-        list_to_df = []
-        train = glob.glob("{}/*/*/*.xml".format(data_dir)) #returns te.
-        test = glob.glob("{}/*/*/*/*.xml".format(data_dir))
-        # file = [glob.glob("{}*.xml".format(item)) for item in directories] #returns equal many folders containing xml-files
-        for item in train, test:
-            list_to_df.append(item) #iterate and add to final folder to get format nested list with a list pr. directory containing xml files for furture DF-split.
-        flat_list = [i for sublist in list_to_df for i in sublist]
-        return flat_list
-
-
-def make_pd_from_tree(lists_of_file_names):
-        # print(lists_of_file_names)
-        data_df = pd.DataFrame(columns = ["sentence_id", "token_id", "char_start_id", "char_end_id", "split"]) #for test purposes
-        ner_df = pd.DataFrame(columns = ["sentence_id", "ner_id", "char_start_id", "char_end_id"]) # for test
-        index = 1   
-        for filename in lists_of_file_names:
-            if 'Test' in filename:
-                split = 'test'
-            else:
-                split = 'train'
-            xml = ET.parse(filename)
-            root = xml.getroot()
-            for sentence in root.iter('sentence'): # get sent id and text 
-                sent_id = sentence.get('id')
-                # print(sentence.attrib)
-                for item in sentence:
-                    # print(item.attrib)
-                    if item.tag == 'entity': #ensuring that ther e is an entity at all. would otherwise get 000000 values and spoil the model.
-                        ner_id = item.get('type') #ner = type
-                        token_id = item.get('text') #entity = name / text
-                        if ";" in item.get('charOffset'):
-                            char_offsets = item.get('charOffset').split(';') #split charoffset
-                            for span in char_offsets:
-                                char_start_id, char_end_id = span.split('-')
-                                # print(char_start_id, char_end_id)
-                                data_df.loc[index] = [sent_id, token_id, char_start_id, char_end_id, split]
-                                ner_df.loc[index] = [sent_id, ner_id, char_start_id, char_end_id]
-                                index += 1
-                                # print(data_df, ner_df)
-                                # break
-                        else: 
-                            char_start_id, char_end_id = item.get('charOffset').split('-')[0], item.get('charOffset').split('-')[1] # split char off set
-                            # print(char_start_id, char_end_id)
-                            data_df.loc[index] = [sent_id, token_id, char_start_id, char_end_id, split]
-                            ner_df.loc[index] = [sent_id, ner_id, char_start_id, char_end_id]
-                            # print(data_df, ner_df)
-                            index += 1     
-            # if index > 10: # to get smaller dataset, only for tester. 
-            #     break   
-        return data_df, ner_df
-
-# data_frames = make_pd_from_tree(get_tree_from_file('DDICorpus'))
-# print(data_frames[0])
-# print('---')
-# print(data_frames[1])
-
-data_df = make_pd_from_tree(get_tree_from_file('DDICorpus'))[0]
-ner_df = make_pd_from_tree(get_tree_from_file('DDICorpus'))[1]
-# print('printing data df with labels')
-# print(data_df)
-
-# print(ner_df['ner_id'].value_counts())
-
-#functions with pseudo returns instead of .self.
-def data_df_label_encoding(data_df):
-    #label_encoding
-    lb_make_data = LabelEncoder()
-    data_df['token_id'] = lb_make_data.fit_transform(data_df['token_id'])
-    lb_make_name_mapping_data = dict(zip(lb_make_data.classes_, lb_make_data.transform(lb_make_data.classes_)))
-    # print(data_df)
-    return data_df, lb_make_name_mapping_data
-
-# print('Printing label encoded data df')
-# print(data_df_label_encoding(data_df)[1])
-
-#functions with pseudo returns instead of .self.
-def ner_id_label_encoding(ner_df):
-    #label_encoding
-    lb_make_ner = LabelEncoder()
-    ner_df['ner_id'] = lb_make_ner.fit_transform(ner_df['ner_id'])
-    lb_make_name_mapping_ner = dict(zip(lb_make_ner.classes_, lb_make_ner.transform(lb_make_ner.classes_)))
-    # print(ner_df)
-    return ner_df, lb_make_name_mapping_ner
-
-# print(ner_id_label_encoding(ner_df))
-
-
-#setting variable for de-coding variables: --> must be done before train/test splitting
-id2word = data_df_label_encoding(data_df)[1]
-id2ner = ner_id_label_encoding(ner_df)[1]
-
-
-#making split/validation + test set of data_df
-#made with functions instead of .self.
-train, validate = np.split(data_df_label_encoding(data_df)[0].loc[data_df['split'] == 'train'].sample(frac=1), [int(.2*len(data_df_label_encoding(data_df)[0]))])
-# print(train,validate)
-
-
-#make test. only testable if i = total
-test = data_df_label_encoding(data_df)[0].loc[data_df['split'] == 'test']
-# print('printing test-data from data df')
-# print(test)
-
-
 class DataLoaderBase:
 
     #### DO NOT CHANGE ANYTHING IN THIS CLASS ### !!!!
@@ -184,16 +77,19 @@ class DataLoader(DataLoaderBase):
         for item in train, test:
             list_to_df.append(item) #iterate and add to final folder to get format nested list with a list pr. directory containing xml files for furture DF-split.
         flat_list = [i for sublist in list_to_df for i in sublist]
-        pass
+        return flat_list
 
 
     def make_pd_from_tree(self, lists_of_file_names):
         # print(lists_of_file_names)
-        # data_df = pd.DataFrame(columns = ["sent_id", "token_id", "char_start_id", "char_end_id", "split"]) #for test purposes
-        # ner_df = pd.DataFrame(columns = ["sent_id", "ner_id", "char_start_id", "char_end_id"]) # for test
-        self.id2ner = dict()
-        self.id2word = dict()
-        index = 1   
+        self.id2word = {}
+        self.id2ner = {}
+        self.id2ner[0] = 'None'
+        punctuation = ['.',',',':',';','!','?','!','/', "'", '%', '(', ')']
+        self.data_df = pd.DataFrame(columns = ["sentence_id", "token_id", "char_start_id", "char_end_id", "split"]) #for test purposes
+        self.ner_df = pd.DataFrame(columns = ["sentence_id", "ner_id", "char_start_id", "char_end_id"]) # for test
+        df_index = 1
+        ner_index = 1
         for filename in lists_of_file_names:
             if 'Test' in filename:
                 split = 'test'
@@ -203,41 +99,56 @@ class DataLoader(DataLoaderBase):
             root = xml.getroot()
             for sentence in root.iter('sentence'): # get sent id and text 
                 sent_id = sentence.get('id')
-                # print(sentence.attrib)
+                sentence_text = sentence.get('text')
+                tokens = sentence_text.split(' ')
+                current_index = 0
+                # print(sentence_text)
+                for word in tokens:
+                    # print(    word)
+                    character_start = current_index
+                    character_end = current_index + len(word)-1 #minus 1 because len(word) doesnt take index-0 into account
+                    if word:
+                        if word[-1] in punctuation:
+                            word = word[:-1]
+                            character_end -= 1  #for removed punctuation item decreasing the length by 1
+                            # print(word)
+                        if word.isalpha() == False:
+                            pass
+                        else:
+                            current_index += len(word)+1 # for beginning of next word, as it cannot be on the same slot as the previous ;) 
+                            self.data_df.loc[df_index] = [sent_id, word, character_start, character_end, split] #word to be LabelEncoded later
+                            df_index += 1
                 for item in sentence:
-                    # print(item.attrib)
-                    if item.tag == 'entity': #ensuring that ther e is an entity at all. would otherwise get 000000 values and spoil the model.
-                        ner_id = item.get('type') #ner = type
-                        token_id = item.get('text') #entity = name / text
-                        if ";" in item.get('charOffset'):
-                            char_offsets = item.get('charOffset').split(';') #split charoffset
-                            for span in char_offsets:
-                                char_start_id, char_end_id = span.split('-')
-                                # print(char_start_id, char_end_id)
-                                self.data_df.loc[index] = [sent_id, token_id, char_start_id, char_end_id, split]
-                                self.ner_df.loc[index] = [sent_id, ner_id, char_start_id, char_end_id]
-                                index += 1
+                        # print(item)
+                        if item.tag == 'entity': #ensuring that ther e is an entity at all.
+                            ner_id = item.get('type') #ner = type
+                            # print(ner_id)
+                            token_id = item.get('text') #entity = name / text
+                            if ";" in item.get('charOffset'):
+                                char_offsets = item.get('charOffset').split(';') #split charoffset
+                                for span in char_offsets:
+                                    char_start_id, char_end_id = span.split('-')
+                                    char_start_id, char_end_id = int(char_start_id), int(char_end_id)
+                                    # print(char_start_id, char_end_id)
+                                    self.ner_df.loc[ner_index] = [sent_id, ner_id, char_start_id, char_end_id]
+                                    ner_index +=1
+                            else: 
+                                char_start_id, char_end_id = item.get('charOffset').split('-')[0], item.get('charOffset').split('-')[1] # split char off set
+                                char_start_id, char_end_id = int(char_start_id), int(char_end_id)
+                                self.ner_df.loc[ner_index] = [sent_id, ner_id, char_start_id, char_end_id]
                                 # print(data_df, ner_df)
-                                # break
-                        else: 
-                            char_start_id, char_end_id = item.get('charOffset').split('-')[0], item.get('charOffset').split('-')[1] # split char off set
-                            # print(char_start_id, char_end_id)
-                            self.data_df.loc[index] = [sent_id, token_id, char_start_id, char_end_id, split]
-                            self.ner_df.loc[index] = [sent_id, ner_id, char_start_id, char_end_id]
-                            # print(data_df, ner_df)
-                            index += 1     
-            if index > 10: # to get smaller dataset, only for tester. 
-                break   
-
+                                ner_index += 1     
+            if ner_index > 100: # to get smaller dataset, only for tester. 
+                break 
         pass
 
 
     def data_df_label_encoding(self):
         #label_encoding
         lb_make_df = LabelEncoder()
-        self.data_df['token_id'] = lb_make_df.fit_transform(data_df['token_id'])
-        self.lb_make_name_mapping = dict(zip(lb_make_df.classes_, lb_make_df.transform(lb_make_df.classes_)))
-        self.id2word = self.lb_make_name_mapping
+        self.data_df['token_id'] = lb_make_df.fit_transform(self.data_df['token_id'])
+        lb_make_df_name_mapping = dict(zip(lb_make_df.classes_, lb_make_df.transform(lb_make_df.classes_)))
+        self.id2word = lb_make_df_name_mapping
         # print(data_df)
         pass
 
@@ -245,9 +156,9 @@ class DataLoader(DataLoaderBase):
     def ner_id_label_encoding(self):
         #label_encoding
         lb_make_ner = LabelEncoder()
-        self.ner_df['ner_id'] = lb_make_ner.fit_transform(ner_df['ner_id'])
-        self.lb_make_name_mapping = dict(zip(lb_make_ner.classes_, lb_make_ner.transform(lb_make_ner.classes_)))
-        self.id2ner = self.lb_make_name_mapping
+        self.ner_df['ner_id'] = lb_make_ner.fit_transform(self.ner_df['ner_id'])
+        lb_make_ner_name_mapping = dict(zip(lb_make_ner.classes_, lb_make_ner.transform(lb_make_ner.classes_)))
+        self.id2ner = lb_make_ner_name_mapping
         # print(data_df)
         pass
 
@@ -259,29 +170,49 @@ class DataLoader(DataLoaderBase):
         self.data_df = pd.DataFrame(columns = ["sentence_id", "token_id", "char_start_id", "char_end_id", "split"]) #for test purposes
         self.ner_df = pd.DataFrame(columns = ["sentence_id", "ner_id", "char_start_id", "char_end_id"]) # for test
 
+        # print(self.get_tree_from_file(data_dir))
 
-        #fill out the DF's above.
-        make_pd_from_tree(get_tree_from_file('DDICorpus'))
-        data_frames = make_pd_from_tree(get_tree_from_file('DDICorpus'))
-
-        print('Printing Data_df', data_frames[0])
+        # fill out the DF's above.
+        # self.make_pd_from_tree(self.get_tree_from_file(data_dir))
+        self.make_pd_from_tree(self.get_tree_from_file(data_dir))
+        # print(data_frames)
+        print('Printing Data_df')
+        print(self.data_df)
         print('---')
-        print('Printing Ner_df', data_frames[1])
+        print('Printing Ner_df')
+        print(self.ner_df)
 
         #Label-Encode text-values in DF
-        print('Encoding labels...')
-        data_df_label_encoding()
-        ner_id_label_encoding()
+        print('Encoding labels into numeric values...')
+        self.data_df_label_encoding()
+        self.ner_id_label_encoding()
+
+        print(self.data_df)
+        print(self.ner_df)
+
+        self.vocab = list(self.id2word.keys())
+
+        # id2word = data_df_label_encoding(data_df)[1]
+        self.id2word = dict(zip(self.id2word.values(), self.id2word.keys()))
+# print(id2word)
+        # id2ner = ner_id_label_encoding(ner_df)[1]
+        self.id2ner = dict(zip(self.id2ner.values(), self.id2ner.keys()))
+        print(self.id2word)
+        print(self.id2ner)
+
+        # data_df_label_encoding() # [1]
+        # ner_id_label_encoding() # [1]
 
         #split sets --- added .sample(frac=1) to shuffle the rows of the selected part of the DF.
         #the two respective training and validation set has been divided 8/2
+        print('Making train and validation set in ratio 8-2 of total training set . . . ')
+        print('Making test-set . . . ')
         train, validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
         test = self.data_df.loc[self.data_df['split'] == 'test']
-        print('Making train and validation set in ratio 8-2...')
+        print('Done')
 
 
-
-
+        self.max_sample_length = 70
 
 
 
