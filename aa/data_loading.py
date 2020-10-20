@@ -264,7 +264,7 @@ class DataLoader(DataLoaderBase):
         to return a short list of count-values
         """
         dic = dict()
-        array = np.array(tensor)
+        array = np.array(tensor.cpu())
 
         types, counts = np.unique(array, return_counts=True) #returns tuple of (x,y)
         types, counts = types.astype(int), counts.astype(int)
@@ -304,7 +304,7 @@ class DataLoader(DataLoaderBase):
         nparray_train = self.df_to_tens(self.max_sample_length, train)
 
         nparray_validate = self.df_to_tens(self.max_sample_length, validate)
-        # nparray_test = self.df_to_tens(self.max_sample_length, test)
+        nparray_test = self.df_to_tens(self.max_sample_length, test)
 
         # print(type(nparray_train))
         # print('---')
@@ -315,14 +315,14 @@ class DataLoader(DataLoaderBase):
         # print('turning np arrays into tensor objects.')
         tensor_train = torch.from_numpy(nparray_train)#.to(self.device)
         tensor_validate = torch.from_numpy(nparray_validate)#.to(self.device)
-        # tensor_test = torch.from_numpy(nparray_test).to(self.device)
+        tensor_test = torch.from_numpy(nparray_test).to(self.device)
 
         # print(type(tensor_train))
         # print('done . . .')
 
 
 
-        return tensor_train, tensor_validate #tensor_test
+        return tensor_train, tensor_validate, tensor_test
 
     def plot_split_ner_distribution(self):
         # should plot a histogram displaying ner label counts for each split
