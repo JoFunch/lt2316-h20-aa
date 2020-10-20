@@ -11,6 +11,7 @@ import glob
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import numpy as np
+import matplotlib.pyplot as plt
 
 class DataLoaderBase:
 
@@ -138,7 +139,7 @@ class DataLoader(DataLoaderBase):
                                 self.ner_df.loc[ner_index] = [sent_id, ner_id, char_start_id, char_end_id]
                                 # print(data_df, ner_df)
                                 ner_index += 1     
-            if ner_index > 100: # to get smaller dataset, only for tester. 
+            if ner_index > 10: # to get smaller dataset, only for tester. 
                 break 
         pass
 
@@ -163,10 +164,32 @@ class DataLoader(DataLoaderBase):
         pass
 
 
+    def max_length(self): 
+    
+        longest = self.data_df["sentence_id"].value_counts()
+        # print(longest)
+        max_sample_length = longest.max() 
+
+        return max_sample_length
+
+    def padding(self, max_length, sentence_to_pad):
+        length_1 = len(sentence_to_pad)
+        diff = max_length - length_1
+        padding = [-1] * diff
+        return  sentence_to_pad.extend(padding)
+
+
+
+
+
+# print(df_to_tens(max_length(data_df), train, ner_df))
+
+
     def _parse_data(self,data_dir):
         # Should parse data in the data_dir, create two dataframes with the format specified in
         # __init__(), and set all the variables so that run.ipynb run as it is.
         
+
         self.data_df = pd.DataFrame(columns = ["sentence_id", "token_id", "char_start_id", "char_end_id", "split"]) #for test purposes
         self.ner_df = pd.DataFrame(columns = ["sentence_id", "ner_id", "char_start_id", "char_end_id"]) # for test
 
@@ -199,22 +222,9 @@ class DataLoader(DataLoaderBase):
         self.id2ner = dict(zip(self.id2ner.values(), self.id2ner.keys()))
         print(self.id2word)
         print(self.id2ner)
-
+        self.max_sample_length = self.max_length()
         # data_df_label_encoding() # [1]
         # ner_id_label_encoding() # [1]
-
-        #split sets --- added .sample(frac=1) to shuffle the rows of the selected part of the DF.
-        #the two respective training and validation set has been divided 8/2
-        print('Making train and validation set in ratio 8-2 of total training set . . . ')
-        print('Making test-set . . . ')
-        train, validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
-        test = self.data_df.loc[self.data_df['split'] == 'test']
-        print('Done')
-
-
-        self.max_sample_length = 70
-
-
 
         # NOTE! I strongly suggest that you create multiple functions for taking care
         # of the parsing needed here. Avoid create a huge block of code here and try instead to 
@@ -223,15 +233,123 @@ class DataLoader(DataLoaderBase):
         pass
 
 
+    def df_to_tens(self, max_length, df_split):
+        """
+        The idea here is to convert a DF-split into a list of sorts and loop it rhough the NER to see if any hits.
+
+        """
+        y_tensor = []
+        merged = df_split.merge(self.ner_df, how='left', left_on=['sentence_id', 'char_start_id', 'char_end_id'], right_on=['sentence_id', 'char_start_id', 'char_end_id']).fillna(-1)
+
+        merged_df = merged.sort_values(by=['sentence_id', 'char_start_id'])
+        # print(max_length)
+        merged = merged.groupby('sentence_id')
+        # print(merged_df)
+        for sentence_id, df_grouped_by_sentence in merged:
+            df_sent = [int(v) for v in list(df_grouped_by_sentence['ner_id'])]
+            # print(df_sent)
+            if len(df_sent) < self.max_sample_length: #pad
+                self.padding(self.max_sample_length, df_sent)
+                y_tensor.append(df_sent)
+            else:
+                if len(df_sent) >= self.max_sample_length:
+                    y_tensor.append(df_sent)
+        y_tensor = np.asarray(y_tensor, dtype=np.float32)
+                    
+        return y_tensor
+
+
+
+    def return_tensor_data(self, tensor):
+        """
+        to return a short list of count-values
+        """
+        dic = dict()
+        array = np.array(tensor)
+
+        types, counts = np.unique(array, return_counts=True) #returns tuple of (x,y)
+        types, counts = types.astype(int), counts.astype(int)
+
+        dic = dict(zip(types, counts))
+
+        if -1.0 in dic:
+            del dic[-1.0]
+
+
+        
+
+        return dic
+
+
+
+
+
     def get_y(self):
         # Should return a tensor containing the ner labels for all samples in each split.
         # the tensors should have the following following dimensions:
         # (NUMBER_SAMPLES, MAX_SAMPLE_LENGTH)
         # NOTE! the labels for each split should be on the GPU
-        pass
+
+        # print('Making train and validation set in ratio 8-2 of total training set . . . ')
+        # print('Making test-set . . . ')
+        train, validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
+        test = self.data_df.loc[self.data_df['split'] == 'test']
+
+        # print(train)
+        # print('---')
+        # print(validate)
+        # print('---')
+        # print(test)
+
+        # print('turning into np arrays . . . ')
+        nparray_train = self.df_to_tens(self.max_sample_length, train)
+
+        nparray_validate = self.df_to_tens(self.max_sample_length, validate)
+        # nparray_test = self.df_to_tens(self.max_sample_length, test)
+
+        # print(type(nparray_train))
+        # print('---')
+        # print(nparray_validate)
+        # print('---')
+        # print(nparray_test)
+
+        # print('turning np arrays into tensor objects.')
+        tensor_train = torch.from_numpy(nparray_train)#.to(self.device)
+        tensor_validate = torch.from_numpy(nparray_validate)#.to(self.device)
+        # tensor_test = torch.from_numpy(nparray_test).to(self.device)
+
+        # print(type(tensor_train))
+        # print('done . . .')
+
+
+
+        return tensor_train, tensor_validate #tensor_test
 
     def plot_split_ner_distribution(self):
         # should plot a histogram displaying ner label counts for each split
+        train = self.return_tensor_data(self.get_y()[0])
+        validate = self.return_tensor_data(self.get_y()[1])
+        #test = return_tensor_data(self.get_y[2])
+        # print(train)
+        # print(validate)
+
+        df = pd.DataFrame([train, validate], index=['train', 'validate']) 
+
+        # print(df)
+
+        fig, ax= plt.subplots(1,1, figsize=(6,5))
+
+        df.plot.bar(ax=ax)
+
+        fig.tight_layout()
+        fig.show()
+
+        ax.set_xlabel('Df Split')
+
+
+        plt.show()
+
+
         pass
 
 
