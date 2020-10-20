@@ -328,11 +328,11 @@ class DataLoader(DataLoaderBase):
         # should plot a histogram displaying ner label counts for each split
         train = self.return_tensor_data(self.get_y()[0])
         validate = self.return_tensor_data(self.get_y()[1])
-        #test = return_tensor_data(self.get_y[2])
+        test = return_tensor_data(self.get_y[2])
         # print(train)
         # print(validate)
 
-        df = pd.DataFrame([train, validate], index=['train', 'validate']) 
+        df = pd.DataFrame([train, validate, test], index=['train', 'validate', 'test']) 
 
         # print(df)
 
