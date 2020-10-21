@@ -10,8 +10,8 @@ def int_to_word(word, id2word):
 
 def uppercase(sent):
 	uppercase = []
-    if sent:
-        if sent.isupper():
+	if sent:
+		if sent.isupper():
 			uppercase.append(1)
 		else:
 			uppercase.append(0)
@@ -35,9 +35,8 @@ def add_features_to_df(data, id2word):
 	data['pos_tag'] = data.loc[:, 'token_id'].apply(pos_tag)
 
 	data['uppercase'] = data.loc[:, 'token_id'].apply(lambda x: 1 if x.isupper() else 0)
-    
-    print(data)
-    return data
+	print(data)
+	return data
     
 
 def pos_tag_encoding(df):
@@ -56,11 +55,8 @@ def pos_tag_encoding(df):
     
 def encode_new_features(data):
     pos_tag_encoding(data)
-        
-	
 
-
-	pass
+    pass
 
 def extract_features(data:pd.DataFrame, max_sample_length:int):
     # this function should extract features for all samples and 
