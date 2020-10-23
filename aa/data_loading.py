@@ -264,7 +264,7 @@ class DataLoader(DataLoaderBase):
         to return a short list of count-values
         """
         dic = dict()
-        array = np.array(tensor.cpu())
+        array = np.array(tensor.detach())
 
         types, counts = np.unique(array, return_counts=True) #returns tuple of (x,y)
         types, counts = types.astype(int), counts.astype(int)
