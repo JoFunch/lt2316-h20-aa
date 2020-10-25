@@ -264,7 +264,7 @@ class DataLoader(DataLoaderBase):
         to return a short list of count-values
         """
         dic = dict()
-        array = np.array(tensor.detach())
+        array = np.array(tensor.detach().cpu())
 
         types, counts = np.unique(array, return_counts=True) #returns tuple of (x,y)
         types, counts = types.astype(int), counts.astype(int)
@@ -292,7 +292,7 @@ class DataLoader(DataLoaderBase):
         # print('Making train and validation set in ratio 8-2 of total training set . . . ')
         # print('Making test-set . . . ')
         train, validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
-        test = self.data_df.loc[self.data_df['split'] == 'test']
+        #test = self.data_df.loc[self.data_df['split'] == 'test']
 
         # print(train)
         # print('---')
@@ -304,7 +304,7 @@ class DataLoader(DataLoaderBase):
         nparray_train = self.df_to_tens(self.max_sample_length, train)
 
         nparray_validate = self.df_to_tens(self.max_sample_length, validate)
-        nparray_test = self.df_to_tens(self.max_sample_length, test)
+        #nparray_test = self.df_to_tens(self.max_sample_length, test)
 
         # print(type(nparray_train))
         # print('---')
@@ -313,26 +313,26 @@ class DataLoader(DataLoaderBase):
         # print(nparray_test)
 
         # print('turning np arrays into tensor objects.')
-        tensor_train = torch.from_numpy(nparray_train)#.to(self.device)
-        tensor_validate = torch.from_numpy(nparray_validate)#.to(self.device)
-        tensor_test = torch.from_numpy(nparray_test).to(self.device)
+        tensor_train = torch.from_numpy(nparray_train).to(self.device)
+        tensor_validate = torch.from_numpy(nparray_validate).to(self.device)
+        #tensor_test = torch.from_numpy(nparray_test).to(self.device)
 
         # print(type(tensor_train))
         # print('done . . .')
 
 
 
-        return tensor_train, tensor_validate, tensor_test
+        return tensor_train, tensor_validate#, tensor_test
 
     def plot_split_ner_distribution(self):
         # should plot a histogram displaying ner label counts for each split
         train = self.return_tensor_data(self.get_y()[0])
         validate = self.return_tensor_data(self.get_y()[1])
-        test = return_tensor_data(self.get_y[2])
+        #test = return_tensor_data(self.get_y[2])
         # print(train)
         # print(validate)
 
-        df = pd.DataFrame([train, validate, test], index=['train', 'validate', 'test']) 
+        df = pd.DataFrame([train, validate], index=['train', 'validate']) 
 
         # print(df)
 
