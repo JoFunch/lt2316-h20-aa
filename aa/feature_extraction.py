@@ -55,7 +55,7 @@ def encode_new_features(data):
 
     return encoding_df, encoding_dict
 
-def df_to_tens(df_split):
+def df_to_tens(df_split, max_sample_length):
         """
         The idea here is to convert a DF-split into a list of sorts and loop it rhough the NER to see if any hits.
 
@@ -64,25 +64,28 @@ def df_to_tens(df_split):
 
         sent_id = df_split.groupby('sentence_id')
         # print(merged_df)
-        for sentence_id, df_grouped_by_sentence in merged:
-            df_sent = [int(v) for v in list(df_grouped_by_sentence['ner_id'])]
-            # print(df_sent)
-            if len(df_sent) < self.max_sample_length: #pad
-                self.padding(self.max_sample_length, df_sent)
+        for sentence_id, df_grouped_by_sentence in sent_id:
+            df_sent = [[r['token_id'], r['pos_tag'], r['uppercase'], r['length']] for i, r in df_grouped_by_sentence.iterrows()] #df_grouped_by_sentence['ner_id']]
+            #print(df_sent)
+            if len(df_sent) < max_sample_length: #pad
+                pad = [[0, 0, 0, 0]]    #padding(max_sample_length, df_sent)
+                diff = max_sample_length - len(df_sent)
+                df_sent.extend(pad * diff)
+                #print(df_sent)
                 y_tensor.append(df_sent)
             else:
-                if len(df_sent) >= self.max_sample_length:
+                if len(df_sent) >= max_sample_length:
                     y_tensor.append(df_sent)
         y_tensor = np.asarray(y_tensor, dtype=np.float32)
                     
         return y_tensor
+        
 
 
 
 
 
-
-def extract_features(data:pd.DataFrame, max_sample_length:int, id2word):
+def extract_features(data:pd.DataFrame, max_sample_length:int, id2word, device):
     # this function should extract features for all samples and 
     # return a features for each split. The dimensions for each split
     # should be (NUMBER_SAMPLES, MAX_SAMPLE_LENGTH, FEATURE_DIM)
@@ -97,15 +100,22 @@ def extract_features(data:pd.DataFrame, max_sample_length:int, id2word):
     
     
     #Split DF with features in it
-    train, validate= np.split(encoded_features.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(encoded_features))])
-    #test = self.data_df.loc[self.data_df['split'] == 'test']
+    train, validate= np.split(encoded_features.loc[encoded_features['split'] == 'train'].sample(frac=1), [int(.2*len(encoded_features))])
+    #test = encoded_features.loc[encoded_features['split'] == 'test']
     
     
     #make df_split into arrays
+    nparray_train = df_to_tens(train, max_sample_length)
+    nparray_validate = df_to_tens(validate, max_sample_length)
+    # nparray_test = df_to_tens(train, max_sample_length)
     
     
+    #turn arrays into tensors
+    tensor_train = torch.from_numpy(nparray_train)# .to(self.device)
+    tensor_validate = torch.from_numpy(nparray_validate)# .to(self.device)
+    # tensor_test = torch.from_numpy(nparray_test)
     
     
     # NOTE! Feel free to add any additional arguments to this function. If so
     # document these well and make sure you dont forget to add them in run.ipynb
-    return encoded_features
+    return tensor_train.to(device), tensor_validate.to(device)# , tensor_test.to(device)
