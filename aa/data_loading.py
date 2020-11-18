@@ -138,8 +138,8 @@ class DataLoader(DataLoaderBase):
                                 self.ner_df.loc[ner_index] = [sent_id, ner_id, char_start_id, char_end_id]
                                 # print(data_df, ner_df)
                                 ner_index += 1     
-            if ner_index > 10: # to get smaller dataset, only for tester. 
-                break 
+            #if ner_index > 10: # to get smaller dataset, only for tester. 
+             #   break 
         pass
 
 
@@ -291,8 +291,8 @@ class DataLoader(DataLoaderBase):
 
         # print('Making train and validation set in ratio 8-2 of total training set . . . ')
         # print('Making test-set . . . ')
-        train, validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
-        #test = self.data_df.loc[self.data_df['split'] == 'test']
+        self.train, self.validate= np.split(self.data_df.loc[self.data_df['split'] == 'train'].sample(frac=1), [int(.2*len(self.data_df))])
+        self.test = self.data_df.loc[self.data_df['split'] == 'test']
 
         # print(train)
         # print('---')
@@ -301,10 +301,10 @@ class DataLoader(DataLoaderBase):
         # print(test)
 
         # print('turning into np arrays . . . ')
-        nparray_train = self.df_to_tens(self.max_sample_length, train)
+        nparray_train = self.df_to_tens(self.max_sample_length, self.train)
 
-        nparray_validate = self.df_to_tens(self.max_sample_length, validate)
-        #nparray_test = self.df_to_tens(self.max_sample_length, test)
+        nparray_validate = self.df_to_tens(self.max_sample_length, self.validate)
+        nparray_test = self.df_to_tens(self.max_sample_length, self.test)
 
         # print(type(nparray_train))
         # print('---')
@@ -315,24 +315,24 @@ class DataLoader(DataLoaderBase):
         # print('turning np arrays into tensor objects.')
         tensor_train = torch.from_numpy(nparray_train).to(self.device)
         tensor_validate = torch.from_numpy(nparray_validate).to(self.device)
-        #tensor_test = torch.from_numpy(nparray_test).to(self.device)
+        tensor_test = torch.from_numpy(nparray_test).to(self.device)
 
         # print(type(tensor_train))
         # print('done . . .')
 
 
 
-        return tensor_train, tensor_validate#, tensor_test
+        return tensor_train, tensor_validate, tensor_test
 
     def plot_split_ner_distribution(self):
         # should plot a histogram displaying ner label counts for each split
         train = self.return_tensor_data(self.get_y()[0])
         validate = self.return_tensor_data(self.get_y()[1])
-        #test = return_tensor_data(self.get_y[2])
+        test = self.return_tensor_data(self.get_y()[2])
         # print(train)
         # print(validate)
 
-        df = pd.DataFrame([train, validate], index=['train', 'validate']) 
+        df = pd.DataFrame([train, validate, test], index=['train', 'validate', 'test']) 
 
         # print(df)
 
@@ -355,14 +355,75 @@ class DataLoader(DataLoaderBase):
     def plot_sample_length_distribution(self):
         # FOR BONUS PART!!
         # Should plot a histogram displaying the distribution of sample lengths in number tokens
-        pass
+            def get_list(df_split):
+                nr_of_dist = []
+                train_split = df_split.sort_values(by='sentence_id')
+                train_split = train_split.groupby('sentence_id')
+                for name, items in train_split:
+                    nr_of_dist.append(len(items))
+
+                nr_of_dist = sorted(nr_of_dist)
+                return nr_of_dist
+            
+            
+            train_sample_length = get_list(self.train)
+            validate_sample_length = get_list(self.validate)
+            test_sample_length = get_list(self.test)
+            # print(validate_sample_length)
+
+
+
+            fig, ax = plt.subplots(tight_layout=True)
+            ax.hist(train_sample_length, density=True, bins=20, label = 'Train')
+            ax.hist(validate_sample_length, density=True, bins=30, label = 'Validate')
+            ax.hist(test_sample_length, density=True, bins=40, label = 'Test')
+
+            fig.show()
+            plt.legend()
+            plt.show()
+            pass
 
 
     def plot_ner_per_sample_distribution(self):        
         # FOR BONUS PART!!
         # Should plot a histogram displaying the distribution of number of NERs in sentences
         # e.g. how many sentences has 1 ner, 2 ner and so on
-        pass
+
+            def get_no():
+                counter_dict = dict()
+                no = []
+                df_sort = self.ner_df.sort_values(by='sentence_id')
+                df_group = df_sort.groupby('sentence_id')
+                for name, item in df_group:
+                    no.append(item['ner_id'].values)
+
+
+                lst = [l.tolist() for l in no]
+                
+
+                for item in lst:
+                    for i in item: 
+                        if i not in counter_dict:
+                            counter_dict[i] = 1
+                        else:
+                            counter_dict[i] += 1
+
+                
+
+
+
+
+
+                return counter_dict
+            print('Made over iterations of NER_DF and not individual split_DF')
+            d = get_no()
+            plt.bar(range(len(d)), list(d.values()), align='center')
+            plt.xticks(range(len(d)), list(d.keys()))
+            plt.ylabel('Number of sentences')
+            plt.xlabel('NER-number')
+            plt.show()
+        
+            pass
 
 
     def plot_ner_cooccurence_venndiagram(self):

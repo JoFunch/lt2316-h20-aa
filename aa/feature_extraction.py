@@ -101,21 +101,21 @@ def extract_features(data:pd.DataFrame, max_sample_length:int, id2word, device):
     
     #Split DF with features in it
     train, validate= np.split(encoded_features.loc[encoded_features['split'] == 'train'].sample(frac=1), [int(.2*len(encoded_features))])
-    #test = encoded_features.loc[encoded_features['split'] == 'test']
+    test = encoded_features.loc[encoded_features['split'] == 'test']
     
     
     #make df_split into arrays
     nparray_train = df_to_tens(train, max_sample_length)
     nparray_validate = df_to_tens(validate, max_sample_length)
-    # nparray_test = df_to_tens(train, max_sample_length)
+    nparray_test = df_to_tens(train, max_sample_length)
     
     
     #turn arrays into tensors
     tensor_train = torch.from_numpy(nparray_train)# .to(self.device)
     tensor_validate = torch.from_numpy(nparray_validate)# .to(self.device)
-    # tensor_test = torch.from_numpy(nparray_test)
+    tensor_test = torch.from_numpy(nparray_test)
     
     
     # NOTE! Feel free to add any additional arguments to this function. If so
     # document these well and make sure you dont forget to add them in run.ipynb
-    return tensor_train.to(device), tensor_validate.to(device)# , tensor_test.to(device)
+    return tensor_train.to(device), tensor_validate.to(device), tensor_test.to(device)
